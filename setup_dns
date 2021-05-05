@@ -1,0 +1,102 @@
+#! /bin/bash
+
+apt install -y bind9
+
+interface=eth1
+private_ip=$(ifconfig $interface | grep 'inet' | head -n1 | tail -n1 | awk {'print $2'})
+
+cat <<EOF >/etc/bind/ims.mnc001.mcc001.3gppnetwork.org
+\$ORIGIN ims.mnc001.mcc001.3gppnetwork.org.
+\$TTL 1W
+@                       1D IN SOA       localhost. root.localhost. (
+                                        1               ; serial
+                                        3H              ; refresh
+                                        15M             ; retry
+                                        1W              ; expiry
+                                        1D )            ; minimum
+
+                        1D IN NS        ns
+ns                      1D IN A         $private_ip
+
+pcscf                   1D IN A         $private_ip
+_sip._udp.pcscf         1D SRV 0 0 5060 pcscf
+_sip._tcp.pcscf         1D SRV 0 0 5060 pcscf
+
+icscf                   1D IN A         $private_ip
+_sip._udp               1D SRV 0 0 4060 icscf
+_sip._tcp               1D SRV 0 0 4060 icscf
+
+scscf                   1D IN A         $private_ip
+_sip._udp.scscf         1D SRV 0 0 6060 scscf
+_sip._tcp.scscf         1D SRV 0 0 6060 scscf
+
+hss                     1D IN A         $private_ip
+EOF
+
+
+cat <<EOF >/etc/bind/epc.mnc001.mcc001.3gppnetwork.org
+\$ORIGIN epc.mnc001.mcc001.3gppnetwork.org.
+\$TTL 1W
+@                       1D IN SOA       localhost. root.localhost. (
+                                        1               ; serial
+                                        3H              ; refresh
+                                        15M             ; retry
+                                        1W              ; expiry
+                                        1D )            ; minimum
+
+                        1D IN NS        epcns
+epcns                   1D IN A         $private_ip
+
+pcrf                    1D IN A         127.0.0.5
+EOF
+
+echo '
+zone "ims.mnc001.mcc001.3gppnetwork.org" {
+        type master;
+        file "/etc/bind/ims.mnc001.mcc001.3gppnetwork.org";
+};
+
+zone "epc.mnc001.mcc001.3gppnetwork.org" {
+        type master;
+        file "/etc/bind/epc.mnc001.mcc001.3gppnetwork.org";
+};' >> /etc/bind/named.conf.local
+
+//
+
+echo "options {
+        directory \"/var/cache/bind\";
+
+        // If there is a firewall between you and nameservers you want
+        // to talk to, you may need to fix the firewall to allow multiple
+        // ports to talk.  See http://www.kb.cert.org/vuls/id/800113
+
+        // If your ISP provided one or more IP addresses for stable
+        // nameservers, you probably want to use them as forwarders.
+        // Uncomment the following block, and insert the addresses replacing
+        // the all-0's placeholder.
+
+        // forwarders {
+        //      0.0.0.0;
+        // };
+
+        //========================================================================
+        // If BIND logs error messages about the root key being expired,
+        // you will need to update your keys.  See https://www.isc.org/bind-keys
+        //========================================================================
+        dnssec-validation no;
+        allow-query { any; };
+
+        auth-nxdomain no;    # conform to RFC1035
+        //listen-on-v6 { any; };
+
+};" > /etc/bind/named.conf.options
+
+systemctl restart bind9
+
+sed -i 's/^/#/' /etc/resolv.conf
+
+echo "search ims.mnc001.mcc001.3gppnetwork.org
+nameserver $private_ip" >> /etc/resolv.conf
+
+value=$(echo "\\\t    nameservers:\n                search: [ims.mnc001.mcc001.3gppnetwork.org,epc.mnc001.mcc001.3gppnetwork.org]\n                addresses:\n                      - $private_ip")
+sed -i "/set-name: $interface/ a  $value" /etc/netplan/50-cloud-init.yaml
