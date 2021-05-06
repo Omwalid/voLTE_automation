@@ -94,7 +94,7 @@ sed -i '/# auto_aliases=no/s/^# //g' /usr/local/etc/kamailio/kamailio.cfg
 
 sed -i 's/# alias="sip.mydomain.com"/alias="ims.mnc001.mcc001.3gppnetwork.org"/' /usr/local/etc/kamailio/kamailio.cfg
 
-enable_usage_mysql2='listen=udp:10.4.128.21:5060 advertise 172.24.15.30:5060\nlisten=tcp:10.4.128.21:5060 advertise 172.24.15.30:5060'
+enable_usage_mysql2=$(echo "listen=udp:$private_ip:5060 advertise $private_ip:5060\nlisten=tcp:$private_ip:5060 advertise $private_ip:5060")
 
 sed -i "s/# listen=udp:10.0.0.10:5060/$enable_usage_mysql2/" /usr/local/etc/kamailio/kamailio.cfg
 
