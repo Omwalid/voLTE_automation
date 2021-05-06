@@ -1,5 +1,3 @@
-#! /bin/bash
-
 # install packages
 apt update && apt upgrade -y && apt install -y mysql-server tcpdump screen ntp ntpdate git-core dkms gcc flex bison libmysqlclient-dev make \
 libssl-dev libcurl4-openssl-dev libxml2-dev libpcre3-dev bash-completion g++ autoconf rtpproxy libmnl-dev libsctp-dev ipsec-tools libradcli-dev \
@@ -56,3 +54,74 @@ if [[ -z $(echo $PATH | grep '/usr/local/sbin') ]];then
 echo "PATH=$PATH:/usr/local/sbin
 export PATH" >> /root/.bash_profile
 fi
+
+#Populate MySQL database using kamctlrc command
+
+kamctlrc_conf='SIP_DOMAIN=ims.mnc001.mcc001.3gppnetwork.org\nDBENGINE=MYSQL\n'
+sed -i "1s/^/$kamctlrc_conf/" /usr/local/etc/kamailio/kamctlrc
+
+printf " \ny" | kamdbctl create
+
+#to check DB --> to improve script 
+# mysql -e 'use kamailio; show tables;' --> if there is not result = problem
+# mysql -e 'use kamailio;' --> if there is results = problem
+
+#Edit rtpproxy 
+
+#interface=eth1
+#private_ip=$(ifconfig $interface | grep 'inet' | head -n1 | tail -n1 | awk {'print $2'})
+
+echo "# Defaults for rtpproxy
+
+# The control socket.
+#CONTROL_SOCK=\"unix:/var/run/rtpproxy/rtpproxy.sock\"
+# To listen on an UDP socket, uncomment this line:
+#CONTROL_SOCK=udp:127.0.0.1:22222
+CONTROL_SOCK=udp:127.0.0.1:7722
+
+# Additional options that are passed to the daemon.
+EXTRA_OPTS=\"-l $private_ip -d DBUG:LOG_LOCAL0\"" > /etc/default/rtpproxy
+
+systemctl restart rtpproxy
+
+
+#Edit configuration file to fit your requirements for the VoIP platform
+
+enable_usage_mysql1='#!define WITH_MYSQL\n#!define WITH_AUTH\n#!define WITH_USRLOCDB\n#!define WITH_NAT\n'
+sed -i "1s/^/$enable_usage_mysql1/" /usr/local/etc/kamailio/kamailio.cfg
+
+sed -i '/# auto_aliases=no/s/^# //g' /usr/local/etc/kamailio/kamailio.cfg
+
+sed -i 's/# alias="sip.mydomain.com"/alias="ims.mnc001.mcc001.3gppnetwork.org"/' /usr/local/etc/kamailio/kamailio.cfg
+
+enable_usage_mysql2='listen=udp:10.4.128.21:5060 advertise 172.24.15.30:5060\nlisten=tcp:10.4.128.21:5060 advertise 172.24.15.30:5060'
+
+sed -i "s/# listen=udp:10.0.0.10:5060/$enable_usage_mysql2/" /usr/local/etc/kamailio/kamailio.cfg
+
+#The init.d script
+
+cp /usr/local/src/kamailio/pkg/kamailio/deb/bionic/kamailio.init /etc/init.d/kamailio
+chmod 755 /etc/init.d/kamailio
+
+sed -i 's/PATH=.*/PATH=\/sbin:\/bin:\/usr\/sbin:\/usr\/bin:\/usr\/local\/sbin/' /etc/init.d/kamailio
+
+sed -i 's/DAEMON=.*/DAEMON=\/usr\/local\/sbin\/kamailio/' /etc/init.d/kamailio
+
+sed -i 's/CFGFILE=.*/CFGFILE=\/usr\/local\/etc\/kamailio\/kamailio.cfg/' /etc/init.d/kamailio
+
+cp /usr/local/src/kamailio/pkg/kamailio/deb/bionic/kamailio.default /etc/default/kamailio
+
+sed -i '/#RUN_KAMAILIO=yes/s/^#//g' /etc/default/kamailio
+
+systemctl daemon-reload
+mkdir -p /var/run/kamailio
+cd && adduser --quiet --system --group --disabled-password \
+        --shell /bin/false --gecos "Kamailio" \
+        --home /var/run/kamailio kamailio
+
+chown kamailio:kamailio /var/run/kamailio
+
+systemctl start kamailio.service
+
+#verifie par ps axw	| egrep kamailio --> si il y'a rien fail 
+
