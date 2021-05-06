@@ -125,3 +125,37 @@ systemctl start kamailio.service
 
 #verifie par ps axw	| egrep kamailio --> si il y'a rien fail 
 
+
+#Create new mysql database for pcscf, scscf and icscf,
+#populate databases and grant permissions to respective users identified by a password
+
+mysql -e 'CREATE DATABASE  `pcscf`; CREATE DATABASE  `scscf`; CREATE DATABASE  `icscf`;'
+
+cd /usr/local/src/kamailio/utils/kamctl/mysql
+mysql -u root pcscf < standard-create.sql
+mysql -u root pcscf < presence-create.sql
+mysql -u root pcscf < ims_usrloc_pcscf-create.sql
+mysql -u root pcscf < ims_dialog-create.sql
+
+mysql -u root scscf < standard-create.sql
+mysql -u root scscf < presence-create.sql
+mysql -u root scscf < ims_usrloc_scscf-create.sql
+mysql -u root scscf < ims_dialog-create.sql
+mysql -u root scscf < ims_charging-create.sql
+
+cd /usr/local/src/kamailio/misc/examples/ims/icscf
+mysql -u root icscf < icscf.sql
+
+#we can verify also 
+
+mysql -e "grant delete,insert,select,update on pcscf.* to pcscf@localhost identified by 'heslo'; grant delete,insert,select,update on scscf.* to scscf@localhost identified by 'heslo'; grant delete,insert,select,update on icscf.* to icscf@localhost identified by 'heslo'; grant delete,insert,select,update on icscf.* to provisioning@localhost identified by 'provi'; GRANT ALL PRIVILEGES ON pcscf.* TO 'pcscf'@'%' identified by 'heslo'; GRANT ALL PRIVILEGES ON scscf.* TO 'scscf'@'%' identified by 'heslo'; GRANT ALL PRIVILEGES ON icscf.* TO 'icscf'@'%' identified by 'heslo'; GRANT ALL PRIVILEGES ON icscf.* TO 'provisioning'@'%' identified by 'provi'; FLUSH PRIVILEGES;"
+
+mysql -e "use icscf; INSERT INTO \`nds_trusted_domains\` VALUES (1,'ims.mnc001.mcc001.3gppnetwork.org'); INSERT INTO \`s_cscf\` VALUES (1,'First and only S-CSCF','sip:scscf.ims.mnc001.mcc001.3gppnetwork.org:6060'); INSERT INTO \`s_cscf_capabilities\` VALUES (1,1,0),(2,1,1);"
+
+#Copy pcscf, icscf and scscf configuration files to /etc folder and edit accordingly
+
+cd ~ && git clone https://github.com/herlesupreeth/Kamailio_IMS_Config
+cd Kamailio_IMS_Config
+cp -r kamailio_icscf /etc
+cp -r kamailio_pcscf /etc
+cp -r kamailio_scscf /etc
