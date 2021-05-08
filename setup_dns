@@ -98,7 +98,7 @@ sed -i 's/^/#/' /etc/resolv.conf
 echo "search ims.mnc001.mcc001.3gppnetwork.org
 nameserver $private_ip" >> /etc/resolv.conf
 
-value=$(echo "\\\t    nameservers:\n                search: [ims.mnc001.mcc001.3gppnetwork.org,epc.mnc001.mcc001.3gppnetwork.org]\n                addresses:\n                      - $private_ip")
+value=$(echo "\            nameservers:\n                search: [ims.mnc001.mcc001.3gppnetwork.org,epc.mnc001.mcc001.3gppnetwork.org]\n                addresses:\n                      - $private_ip")
 sed -i "/set-name: $interface/ a  $value" /etc/netplan/50-cloud-init.yaml
 
 netplan apply
