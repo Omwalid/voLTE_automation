@@ -94,7 +94,7 @@ systemctl restart bind9
 
 #sed -i 's/^/#/' /etc/resolv.conf
 
-$resolv_conf="search ims.mnc001.mcc001.3gppnetwork.org\nnameserver $private_ip\n"
+resolv_conf="search ims.mnc001.mcc001.3gppnetwork.org\nnameserver $private_ip\n"
 
 sed -i "1s/^/$resolv_conf/" /etc/resolv.conf
 
