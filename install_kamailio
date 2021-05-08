@@ -1,3 +1,5 @@
+#! /bin/bash
+
 # install packages
 apt update && apt upgrade -y && apt install -y mysql-server tcpdump screen ntp ntpdate git-core dkms gcc flex bison libmysqlclient-dev make \
 libssl-dev libcurl4-openssl-dev libxml2-dev libpcre3-dev bash-completion g++ autoconf rtpproxy libmnl-dev libsctp-dev ipsec-tools libradcli-dev \
@@ -68,8 +70,8 @@ printf " \ny" | kamdbctl create
 
 #Edit rtpproxy 
 
-#interface=eth1
-#private_ip=$(ifconfig $interface | grep 'inet' | head -n1 | tail -n1 | awk {'print $2'})
+interface=eth1
+private_ip=$(ifconfig $interface | grep 'inet' | head -n1 | tail -n1 | awk {'print $2'})
 
 echo "# Defaults for rtpproxy
 
