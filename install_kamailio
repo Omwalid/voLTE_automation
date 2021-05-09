@@ -162,3 +162,53 @@ git checkout 7a0bf097a065c101a6d14929ca96e67dadb51a82
 cp -r kamailio_icscf /etc
 cp -r kamailio_pcscf /etc
 cp -r kamailio_scscf /etc
+
+#Install RTPEngine
+
+export DEB_BUILD_PROFILES="pkg.ngcp-rtpengine.nobcg729"
+apt install dpkg-dev
+git clone https://github.com/sipwise/rtpengine
+cd rtpengine && git checkout mr7.4.1
+
+apt install debhelper default-libmysqlclient-dev gperf iptables-dev libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev libbencode-perl libcrypt-openssl-rsa-perl libcrypt-rijndael-perl libdigest-crc-perl libdigest-hmac-perl libevent-dev libhiredis-dev libio-multiplex-perl libio-socket-inet6-perl libiptc-dev libjson-glib-dev libnet-interface-perl libpcap0.8-dev libsocket6-perl libspandsp-dev libswresample-dev libsystemd-dev libxmlrpc-core-c3-dev markdown dkms module-assistant keyutils libnfsidmap2 libtirpc1 nfs-common rpcbind
+# check with dpkg-checkbuilddeps
+
+dpkg-buildpackage -uc -us
+cd ..
+dpkg -i *.deb
+cp /etc/rtpengine/rtpengine.sample.conf /etc/rtpengine/rtpengine.conf
+
+sed -i "/\[rtpengine\]/ a interface = $private_ip"  /etc/rtpengine/rtpengine.conf
+
+# verify modparam("rtpengine", "rtpengine_sock", "1 == udp:localhost:2223") in kamailio_pcscf.cfg
+
+sed -i 's/RUN_RTPENGINE=.*/RUN_RTPENGINE=yes/' /etc/default/ngcp-rtpengine-daemon
+sed -i 's/RUN_RTPENGINE_RECORDING=.*/RUN_RTPENGINE_RECORDING=yes/' /etc/default/ngcp-rtpengine-recording-daemon
+
+cp /etc/rtpengine/rtpengine-recording.sample.conf /etc/rtpengine/rtpengine-recording.conf
+mkdir /var/spool/rtpengine
+systemctl restart ngcp-rtpengine-daemon.service ngcp-rtpengine-recording-daemon.service ngcp-rtpengine-recording-nfs-mount.service
+systemctl enable ngcp-rtpengine-daemon.service ngcp-rtpengine-recording-daemon.service ngcp-rtpengine-recording-nfs-mount.service
+
+#check with systemctl status 
+
+systemctl stop rtpproxy
+systemctl disable rtpproxy
+systemctl mask rtpproxy
+
+#Running I-CSCF, P-CSCF and S-CSCF as separate process
+
+systemctl stop kamailio
+systemctl disable kamailio
+systemctl mask kamailio
+
+#need to change cofig /etc/kamailio_xcscf/xcscf.cfg .xml
+
+mkdir -p /var/run/kamailio_pcscf
+# kamailio -f /etc/kamailio_pcscf/kamailio_pcscf.cfg -P /kamailio_pcscf.pid -DD -E -e
+
+mkdir -p /var/run/kamailio_scscf
+# kamailio -f /etc/kamailio_scscf/kamailio_scscf.cfg -P /kamailio_scscf.pid -DD -E -e
+
+mkdir -p /var/run/kamailio_icscf
+# kamailio -f /etc/kamailio_icscf/kamailio_icscf.cfg -P /kamailio_icscf.pid -DD -E -e
