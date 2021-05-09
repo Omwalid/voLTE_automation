@@ -170,7 +170,7 @@ apt install dpkg-dev
 git clone https://github.com/sipwise/rtpengine
 cd rtpengine && git checkout mr7.4.1
 
-apt install debhelper default-libmysqlclient-dev gperf iptables-dev libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev libbencode-perl libcrypt-openssl-rsa-perl libcrypt-rijndael-perl libdigest-crc-perl libdigest-hmac-perl libevent-dev libhiredis-dev libio-multiplex-perl libio-socket-inet6-perl libiptc-dev libjson-glib-dev libnet-interface-perl libpcap0.8-dev libsocket6-perl libspandsp-dev libswresample-dev libsystemd-dev libxmlrpc-core-c3-dev markdown dkms module-assistant keyutils libnfsidmap2 libtirpc1 nfs-common rpcbind
+apt install -y debhelper default-libmysqlclient-dev gperf iptables-dev libavcodec-dev libavfilter-dev libavformat-dev libavutil-dev libbencode-perl libcrypt-openssl-rsa-perl libcrypt-rijndael-perl libdigest-crc-perl libdigest-hmac-perl libevent-dev libhiredis-dev libio-multiplex-perl libio-socket-inet6-perl libiptc-dev libjson-glib-dev libnet-interface-perl libpcap0.8-dev libsocket6-perl libspandsp-dev libswresample-dev libsystemd-dev libxmlrpc-core-c3-dev markdown dkms module-assistant keyutils libnfsidmap2 libtirpc1 nfs-common rpcbind
 # check with dpkg-checkbuilddeps
 
 dpkg-buildpackage -uc -us
@@ -212,3 +212,25 @@ mkdir -p /var/run/kamailio_scscf
 
 mkdir -p /var/run/kamailio_icscf
 # kamailio -f /etc/kamailio_icscf/kamailio_icscf.cfg -P /kamailio_icscf.pid -DD -E -e
+
+nodes=('icscf' 'pcscf' 'scscf')
+
+for node in "${nodes[@]}"
+do
+
+  cp /etc/init.d/kamailio /etc/init.d/kamailio_$node
+
+  sed -i 's/PATH=.*/PATH=\/sbin:\/bin:\/usr\/sbin:\/usr\/bin:\/usr\/local\/sbin/' /etc/init.d/kamailio_$node
+  sed -i "s/NAME=.*/NAME=\"kamailio_${node}\"/" /etc/init.d/kamailio_$node
+  sed -i "s/CFGFILE=.*/CFGFILE=\/etc\/\$NAME\/kamailio_${node}\.cfg/" /etc/init.d/kamailio_$node
+
+  cd /etc/default/
+  cp kamailio kamailio_$node
+
+  sed -i "/RUN_KAMAILIO=yes/ a CFGFILE=\/etc\/kamailio_${node}\/kamailio_${node}\.cfg"  /etc/default/kamailio_$node
+
+done
+
+systemctl daemon-reload
+systemctl start  kamailio_scscf  kamailio_pcscf kamailio_icscf
+
