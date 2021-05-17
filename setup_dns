@@ -50,17 +50,15 @@ epcns                   1D IN A         $private_ip
 pcrf                    1D IN A         127.0.0.5
 EOF
 
-echo '
-zone "ims.mnc001.mcc001.3gppnetwork.org" {
+zones=('ims.mnc001.mcc001.3gppnetwork.org' 'epc.mnc001.mcc001.3gppnetwork.org' )
+for zone in ${zones[@]}
+do
+grep -q "zone \"$zone\"" /etc/bind/named.conf.local && echo "zone already exists" ||
+echo "zone \"$zone\" {
         type master;
-        file "/etc/bind/ims.mnc001.mcc001.3gppnetwork.org";
-};
-
-zone "epc.mnc001.mcc001.3gppnetwork.org" {
-        type master;
-        file "/etc/bind/epc.mnc001.mcc001.3gppnetwork.org";
-};' >> /etc/bind/named.conf.local
-
+        file \"/etc/bind/$zone\";
+};" >> /etc/bind/named.conf.local
+done
 
 echo "options {
         directory \"/var/cache/bind\";
