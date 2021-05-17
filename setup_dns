@@ -94,10 +94,11 @@ systemctl restart bind9
 
 resolv_conf="search ims.mnc001.mcc001.3gppnetwork.org\nnameserver $private_ip\n"
 
-sed -i "1s/^/$resolv_conf/" /etc/resolv.conf
+grep -q "$(echo -e "$resolv_conf")" /etc/resolv.conf  || sed -i "1s/^/$resolv_conf/" /etc/resolv.conf
 
-value=$(echo "\            nameservers:\n                search: [ims.mnc001.mcc001.3gppnetwork.org,epc.mnc001.mcc001.3gppnetwork.org]\n                addresses:\n                      - $private_ip")
-sed -i "/set-name: $interface/ a  $value" /etc/netplan/50-cloud-init.yaml
+value=$(echo "           nameservers:\n                search: \[ims.mnc001.mcc001.3gppnetwork.org,epc.mnc001.mcc001.3gppnetwork.org\]\n                addresses:\n                      - $private_ip")
+
+grep -q "$(echo -e "$value")" /etc/netplan/50-cloud-init.yaml  ||  sed -i "/set-name: $interface/ a \ $value" /etc/netplan/50-cloud-init.yaml
 
 ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
 systemctl restart systemd-resolved.service
