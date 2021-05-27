@@ -1,0 +1,80 @@
+#! /bin/bash
+
+source var
+
+
+peer_hss='<Peer FQDN=\"hss.ims.mnc001.mcc001.3gppnetwork.org\" Realm=\"ims.mnc001.mcc001.3gppnetwork.org\"'
+peer_pcrf='<Peer FQDN=\"pcrf.epc.mnc001.mcc001.3gppnetwork.org\" Realm=\"epc.mnc001.mcc001.3gppnetwork.org\"'
+#PCSCF
+sed -i "s/listen=tcp:.*/listen=tcp:$PCSCF_IP:$PCSCF_SIP_PORT/" /etc/kamailio_pcscf/kamailio_pcscf.cfg
+sed -i "s/listen=tcp:.*/listen=tcp:$PCSCF_IP:$PCSCF_SIP_PORT/" /etc/kamailio_pcscf/pcscf.cfg
+sed -i "s/listen=udp:.*/listen=udp:$PCSCF_IP:$PCSCF_SIP_PORT/" /etc/kamailio_pcscf/pcscf.cfg
+
+sed -i "s/<Acceptor.*/<Acceptor port=\"$PCSCF_DIAMETER_PORT\" bind=\"$PCSCF_IP\"\/>/" /etc/kamailio_pcscf/pcscf.xml
+sed -i "s/$peer_pcrf.*/$peer_pcrf port=\"$PCRF_DIAMETER_PORT\"\/>/" /etc/kamailio_pcscf/pcscf.xml
+
+#SCSCF
+sed -i "s/listen=tcp:.*/listen=tcp:$SCSCF_IP:$SCSCF_SIP_PORT/" /etc/kamailio_scscf/scscf.cfg
+sed -i "s/listen=tcp:.*/listen=tcp:$SCSCF_IP:$SCSCF_SIP_PORT/" /etc/kamailio_scscf/kamailio_scscf.cfg
+sed -i "s/listen=udp:.*/listen=udp:$SCSCF_IP:$SCSCF_SIP_PORT/" /etc/kamailio_scscf/scscf.cfg
+sed -i "s/<Acceptor.*/<Acceptor port=\"$SCSCF_DIAMETER_PORT\" bind=\"$SCSCF_IP\"\/>/" /etc/kamailio_scscf/scscf.xml
+sed -i "s/$peer_hss.*/$peer_hss port=\"$HSS_DIAMETER_PORT\"\/>/" /etc/kamailio_scscf/scscf.xml
+
+#ICSCF
+sed -i "s/listen=tcp:.*/listen=tcp:$ICSCF_IP:$ICSCF_SIP_PORT/" /etc/kamailio_icscf/kamailio_icscf.cfg
+sed -i "s/listen=tcp:.*/listen=tcp:$ICSCF_IP:$ICSCF_SIP_PORT/" /etc/kamailio_icscf/icscf.cfg
+sed -i "s/listen=udp:.*/listen=udp:$ICSCF_IP:$ICSCF_SIP_PORT/" /etc/kamailio_icscf/icscf.cfg
+
+sed -i "s/<Acceptor.*/<Acceptor port=\"$ICSCF_DIAMETER_PORT\" bind=\"$ICSCF_IP\"\/>/" /etc/kamailio_icscf/icscf.xml
+sed -i "s/$peer_hss.*/$peer_hss port=\"$HSS_DIAMETER_PORT\"\/>/" /etc/kamailio_icscf/icscf.xml
+
+#configure epc nodes
+
+cd ~/open5gs/
+mv install/etc/freeDiameter install/etc/freeDiameter_backup
+mv install/etc/open5gs install/etc/open5gs_backup
+
+
+#clone the new configuration
+cd ~/open5gs/install/etc
+git clone https://github.com/lakehalwalid/cofig_open5gs.git
+
+mv ~/open5gs/install/etc/cofig_open5gs ~/open5gs/install/etc/open5gs
+
+cd ~/open5gs/install/etc/open5gs
+
+#copy IPs and Ports to hss
+sed -i 's/HSS_PORT/'$HSS_PORT'/g' hss.yaml
+sed -i 's/HSS_SEC_PORT/'$HSS_SEC_PORT'/g' hss.yaml
+sed -i 's/HSS_IP/'$HSS_IP'/g' hss.yaml
+sed -i 's/MME_PORT/'$MME_PORT'/g' hss.yaml
+sed -i 's/MME_IP/'$MME_IP'/g' hss.yaml
+
+#copy IPs and Ports to mme
+sed -i 's/MME_PORT/'$MME_PORT'/g' mme.yaml
+sed -i 's/MME_SEC_PORT/'$MME_SEC_PORT'/g' mme.yaml
+sed -i 's/MME_IP/'$MME_IP'/g' mme.yaml
+sed -i 's/HSS_IP/'$HSS_IP'/g' mme.yaml
+sed -i 's/HSS_PORT/'$HSS_PORT'/g' mme.yaml
+sed -i 's/SGW_IP/'$SGW_IP'/g' mme.yaml
+sed -i 's/PGW_IP/'$PGW_IP'/g' mme.yaml
+
+#copy IPs and Ports to pcrf
+sed -i 's/PCRF_PORT/'$PCRF_PORT'/g' pcrf.yaml
+sed -i 's/PCRF_SEC_PORT/'$PCRF_SEC_PORT'/g' pcrf.yaml
+sed -i 's/PCRF_IP/'$PCRF_IP'/g' pcrf.yaml
+sed -i 's/PGW_IP/'$PGW_IP'/g' pcrf.yaml
+sed -i 's/PGW_PORT/'$PGW_PORT'/g' pcrf.yaml
+sed -i 's/PCSCF_IP/'$PCSCF_IP'/g' pcrf.yaml
+sed -i 's/PCSCF_PORT/'$PCSCF_DIAMETER_PORT'/g' pcrf.yaml
+
+#copy IPs and Ports to pgw
+sed -i 's/PGW_PORT/'$PGW_PORT'/g' pgw.yaml
+sed -i 's/PGW_SEC_PORT/'$PGW_SEC_PORT'/g' pgw.yaml
+sed -i 's/PGW_IP/'$PGW_IP'/g' pgw.yaml
+sed -i 's/PCRF_IP/'$PCRF_IP'/g' pgw.yaml
+sed -i 's/PCRF_PORT/'$PCRF_PORT'/g' pgw.yaml
+sed -i 's/PCSCF_IP/'$PCSCF_IP'/g' pgw.yaml
+
+#copy IPs and Ports to sgw
+sed -i 's/SGW_IP/'$SGW_IP'/g' sgw.yaml
