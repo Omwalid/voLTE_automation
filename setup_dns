@@ -108,6 +108,6 @@ value=$(echo "           nameservers:\n                search: \[ims.mnc001.mcc0
 
 grep -q "$(echo -e "$value")" /etc/netplan/50-cloud-init.yaml  ||  sed -i "/set-name: $interface/ a \ $value" /etc/netplan/50-cloud-init.yaml
 
-ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+#ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
 systemctl restart systemd-resolved.service
 netplan apply
