@@ -70,7 +70,7 @@ printf " \ny" | kamdbctl create
 
 #Edit rtpproxy 
 
-interface=eth1
+interface=ens4
 private_ip=$(ifconfig $interface | grep 'inet' | head -n1 | tail -n1 | awk {'print $2'})
 
 echo "# Defaults for rtpproxy
