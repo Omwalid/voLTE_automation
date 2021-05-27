@@ -9,7 +9,7 @@ peer_pcrf='<Peer FQDN=\"pcrf.epc.mnc001.mcc001.3gppnetwork.org\" Realm=\"epc.mnc
 sed -i "s/listen=tcp:.*/listen=tcp:$PCSCF_IP:$PCSCF_SIP_PORT/" /etc/kamailio_pcscf/kamailio_pcscf.cfg
 sed -i "s/listen=tcp:.*/listen=tcp:$PCSCF_IP:$PCSCF_SIP_PORT/" /etc/kamailio_pcscf/pcscf.cfg
 sed -i "s/listen=udp:.*/listen=udp:$PCSCF_IP:$PCSCF_SIP_PORT/" /etc/kamailio_pcscf/pcscf.cfg
-
+sed -i "s/10.4.128.21/$PCSCF_IP/g" /etc/kamailio_pcscf/pcscf.cfg
 sed -i "s/<Acceptor.*/<Acceptor port=\"$PCSCF_DIAMETER_PORT\" bind=\"$PCSCF_IP\"\/>/" /etc/kamailio_pcscf/pcscf.xml
 sed -i "s/$peer_pcrf.*/$peer_pcrf port=\"$PCRF_DIAMETER_PORT\"\/>/" /etc/kamailio_pcscf/pcscf.xml
 
