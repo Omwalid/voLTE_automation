@@ -1,0 +1,48 @@
+#! /bin/bash
+
+#install mongodb
+apt update
+apt install -y mongodb
+systemctl start mongodb
+systemctl enable mongodb
+
+#setup interfaces
+
+sudo sysctl -w net.ipv4.ip_forward=1
+sudo sysctl -w net.ipv6.conf.all.forwarding=1
+
+ip tuntap add name ogstun mode tun
+ip addr add 192.168.100.1/24 dev ogstun
+ip addr add fd84:6aea:c36e:2b69::/48 dev ogstun
+ip link set ogstun mtu 1400
+ip link set ogstun up
+iptables -t nat -A POSTROUTING -s 192.168.100.0/24 ! -o ogstun -j MASQUERADE
+ip6tables -t nat -A POSTROUTING -s fd84:6aea:c36e:2b69::/48 ! -o ogstun -j MASQUERADE
+iptables -I INPUT -i ogstun -j ACCEPT
+ip6tables -I INPUT -i ogstun -j ACCEPT
+
+ip tuntap add name ogstun2 mode tun
+ip addr add 192.168.101.1/24 dev ogstun2
+ip addr add fd1f:76f3:da9b:0101::/48 dev ogstun2
+ip link set ogstun2 mtu 1400
+ip link set ogstun2 up
+iptables -I INPUT -i ogstun2 -j ACCEPT
+ip6tables -I INPUT -i ogstun2 -j ACCEPT
+
+
+#Install the dependencies for building the source code
+
+apt install -y python3-pip python3-setuptools python3-wheel ninja-build build-essential flex bison git libsctp-dev libgnutls28-dev libgcrypt-dev libssl-dev libidn11-dev libmongoc-dev libbson-dev libyaml-dev libnghttp2-dev libmicrohttpd-dev libcurl4-gnutls-dev libnghttp2-dev meson
+
+#clone and compile
+cd ~
+git clone -b v1.2.4 https://github.com/open5gs/open5gs
+
+cd open5gs
+meson build --prefix=`pwd`/install
+ninja -C build
+
+#install
+cd build
+ninja install
+cd ../
