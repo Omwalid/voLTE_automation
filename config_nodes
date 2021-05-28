@@ -28,6 +28,7 @@ sed -i "s/listen=udp:.*/listen=udp:$ICSCF_IP:$ICSCF_SIP_PORT/" /etc/kamailio_ics
 sed -i "s/<Acceptor.*/<Acceptor port=\"$ICSCF_DIAMETER_PORT\" bind=\"$ICSCF_IP\"\/>/" /etc/kamailio_icscf/icscf.xml
 sed -i "s/$peer_hss.*/$peer_hss port=\"$HSS_DIAMETER_PORT\"\/>/" /etc/kamailio_icscf/icscf.xml
 
+systemctl restart kamailio_icscf kamailio_pcscf kamailio_scscf
 #configure epc nodes
 
 cd ~/open5gs/
