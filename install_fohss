@@ -1,0 +1,146 @@
+#! /bin/bash
+
+set -e
+
+apt-get install python-pip -yqq
+export LC_ALL=C
+pip install gdown
+mkdir -p /usr/lib/jvm
+cd /usr/lib/jvm
+gdown --id 1vgXW2a14wDzlnsu5DKRRIEJ3Yy1e4NG5
+tar xvzf jdk-7u80-linux-x64.tar.gz
+rm jdk-7u80-linux-x64.tar.gz
+update-alternatives --install /usr/bin/java java /usr/lib/jvm/jdk1.7.0_80/bin/java 1
+update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/jdk1.7.0_80/bin/javac 1
+update-alternatives --install /usr/bin/javaws javaws /usr/lib/jvm/jdk1.7.0_80/bin/javaws 1
+
+cd ~
+wget http://archive.apache.org/dist/ant/binaries/apache-ant-1.9.14-bin.tar.gz
+tar xvfvz apache-ant-1.9.14-bin.tar.gz
+mv apache-ant-1.9.14 /usr/local/
+sh -c 'echo ANT_HOME=/usr/local/  >> /etc/environment'
+ln -s /usr/local/apache-ant-1.9.14/bin/ant /usr/bin/ant
+
+mkdir /opt/OpenIMSCore
+cd /opt/OpenIMSCore
+git clone https://github.com/herlesupreeth/FHoSS
+
+cd FHoSS
+export JAVA_HOME="/usr/lib/jvm/jdk1.7.0_80"
+export CLASSPATH="/usr/lib/jvm/jdk1.7.0_80/jre/lib/"
+sed -i "s/Contact at:.*/Contact at: /g" /opt/OpenIMSCore/FHoSS/src/de/fhg/fokus/hss/sh/op/UDR.java
+ant compile deploy | tee ant_compile_deploy.txt
+
+cd deploy
+
+cat > configurator.sh <<'EOF'
+#!/bin/bash
+
+# Initialization & global vars
+# if you execute this script for the second time
+# you should change these variables to the latest
+# domain name and ip address
+DDOMAIN="open-ims\.test"
+DSDOMAIN="open-ims\\\.test"
+DEFAULTIP="127\.0\.0\.1"
+CONFFILES=`ls *.cfg *.xml *.sql *.properties 2>/dev/null`
+
+# Interaction
+printf "Domain Name:"
+read domainname 
+printf "IP Adress:"
+read ip_address
+
+# input domain is to be slashed for cfg regexes 
+slasheddomain=`echo $domainname | sed 's/\./\\\\\\\\\./g'`
+
+  if [ $# != 0 ] 
+  then 
+  printf "changing: "
+      for j in $* 
+      do
+    sed -i -e "s/$DDOMAIN/$domainname/g" $j
+    sed -i -e "s/$DSDOMAIN/$slasheddomain/g" $j
+    sed -i -e "s/$DEFAULTIP/$ip_address/g" $j
+    printf "$j " 
+      done
+  echo 
+  else 
+  printf "File to change [\"all\" for everything, \"exit\" to quit]:"
+  # loop
+      while read filename ;
+      do
+        if [ "$filename" = "exit" ] 
+        then 
+        printf "exitting...\n"
+        break ;
+
+      elif [ "$filename" = "all" ]
+      then    
+          printf "changing: "
+         for i in $CONFFILES 
+         do
+        sed -i -e "s/$DDOMAIN/$domainname/g" $i
+        sed -i -e "s/$DSDOMAIN/$slasheddomain/g" $i
+        sed -i -e "s/$DEFAULTIP/$ip_address/g" $i
+        
+        printf "$i " 
+         done 
+         echo 
+         break;
+
+        elif [ -w $filename ] 
+        then
+            printf "changing $filename \n"
+            sed -i -e "s/$DDOMAIN/$domainname/g" $filename
+            sed -i -e "s/$DSDOMAIN/$slasheddomain/g" $filename
+            sed -i -e "s/$DEFAULTIP/$ip_address/g" $filename
+
+          else 
+          printf "cannot access file $filename. skipping... \n" 
+        fi
+        printf "File to Change:"
+      done 
+  fi
+EOF
+
+chmod +x configurator.sh
+
+interface=ens4
+private_ip=$(ifconfig $interface | grep 'inet' | head -n1 | tail -n1 | awk {'print $2'})
+
+printf 'ims.mnc001.mcc001.3gppnetwork.org\n'$private_ip'\nall\n' | ./configurator.sh 
+
+sed -i 's/open-ims.org/ims.mnc001.mcc001.3gppnetwork.org/g' webapps/hss.web.console/WEB-INF/web.xml
+
+sed -i 's/hibernate.connection.url=.*/hibernate.connection.url=jdbc:mysql:\/\/127.0.0.1:3306\/hss_db/' hibernate.properties
+
+cp configurator.sh ../scripts/
+cd ../scripts
+printf 'ims.mnc001.mcc001.3gppnetwork.org\n'$private_ip'\nall\n' | ./configurator.sh
+
+cp configurator.sh ../config/
+cd ../config
+printf 'ims.mnc001.mcc001.3gppnetwork.org\n'$private_ip'\nall\n' | ./configurator.sh 
+
+cd ../src-web
+sed -i 's/open-ims.org/ims.mnc001.mcc001.3gppnetwork.org/g' WEB-INF/web.xml
+
+set +e
+mysql -e 'drop database hss_db;'
+set -e
+mysql -e 'create database hss_db;'
+
+cd /opt/OpenIMSCore
+mysql -u root --password="hss_db" < FHoSS/scripts/hss_db.sql
+mysql -u root --password="hss_db" < FHoSS/scripts/userdata.sql
+
+cp /opt/OpenIMSCore/FHoSS/deploy/startup.sh /root/hss.sh
+
+cd ~
+
+to_add='cd /opt/OpenIMSCore/FHoSS/deploy\nexport JAVA_HOME="/usr/lib/jvm/jdk1.7.0_80"\nexport CLASSPATH="/usr/lib/jvm/jdk1.7.0_80/jre/lib/"'
+
+sed -i "/^echo \"Building Classpath\"/i $to_add" hss.sh
+
+sed 's/host=.*/host=localhost/' /opt/OpenIMSCore/FHoSS/deploy/hss.properties
