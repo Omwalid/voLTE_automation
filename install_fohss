@@ -143,4 +143,4 @@ to_add='cd /opt/OpenIMSCore/FHoSS/deploy\nexport JAVA_HOME="/usr/lib/jvm/jdk1.7.
 
 sed -i "/^echo \"Building Classpath\"/i $to_add" hss.sh
 
-sed 's/host=.*/host=localhost/' /opt/OpenIMSCore/FHoSS/deploy/hss.properties
+sed -i 's/host=.*/host=localhost/' /opt/OpenIMSCore/FHoSS/deploy/hss.properties
