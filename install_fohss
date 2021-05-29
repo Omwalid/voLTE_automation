@@ -18,7 +18,7 @@ cd ~
 wget http://archive.apache.org/dist/ant/binaries/apache-ant-1.9.14-bin.tar.gz
 tar xvfvz apache-ant-1.9.14-bin.tar.gz
 mv apache-ant-1.9.14 /usr/local/
-sh -c 'echo ANT_HOME=/usr/local/  >> /etc/environment'
+sh -c 'echo ANT_HOME=/usr/local/apache-ant-1.9.14  >> /etc/environment'
 ln -s /usr/local/apache-ant-1.9.14/bin/ant /usr/bin/ant
 
 mkdir /opt/OpenIMSCore
